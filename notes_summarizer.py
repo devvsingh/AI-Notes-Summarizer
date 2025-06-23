@@ -4,14 +4,14 @@ import PyPDF2
 from fpdf import FPDF
 import base64
 
-# Load the AI model
+# Load the summarization model once
 @st.cache_resource
 def load_model():
     return pipeline("summarization", model="facebook/bart-large-cnn")
 
 summarizer = load_model()
 
-# Extract text from uploaded PDF
+# Extract text from PDF
 def extract_text_from_pdf(uploaded_file):
     pdf_reader = PyPDF2.PdfReader(uploaded_file)
     text = ""
@@ -19,35 +19,29 @@ def extract_text_from_pdf(uploaded_file):
         text += page.extract_text() or ""
     return text
 
-# Export summary to downloadable PDF
+# Export summary to PDF and make it downloadable
 def export_summary_to_pdf(summary_text):
-    # Step 1: Generate PDF
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
     for line in summary_text.split('\n'):
         pdf.multi_cell(0, 10, line)
 
-    # Step 2: Save it in current folder
     filename = "summary_output.pdf"
     pdf.output(filename)
 
-    # Step 3: Encode to base64 for download link
     with open(filename, "rb") as f:
         base64_pdf = base64.b64encode(f.read()).decode("utf-8")
 
-    # Step 4: Create a clickable link
     download_link = f'<a href="data:application/pdf;base64,{base64_pdf}" download="{filename}">📄 Click here to download your summary PDF</a>'
     st.markdown(download_link, unsafe_allow_html=True)
 
-
-
-# Streamlit App UI
+# Streamlit UI
 st.set_page_config(page_title="AI Notes Summarizer", layout="centered")
 st.title("📚 AI Notes Summarizer")
 st.write("Summarize your long notes or PDFs instantly using AI (BART Transformer model)")
 
-# Input Type Selection
+# Input options
 option = st.radio("Choose Input Type:", ["Paste Text", "Upload PDF"])
 
 input_text = ""
@@ -60,24 +54,20 @@ else:
         input_text = extract_text_from_pdf(uploaded_pdf)
         st.success("✅ Text extracted from PDF successfully!")
 
-# Summary Button
+# Summarization and export
 if st.button("🧠 Summarize Notes"):
     if input_text.strip() == "":
         st.warning("Please provide some input text first.")
     else:
         with st.spinner("Summarizing... please wait"):
-            # Truncate input to model limit
-            max_input = 1024
-            input_text = input_text[:max_input]
+            # Limit input size to 1024 tokens
+            input_text = input_text[:1024]
             summary = summarizer(input_text, max_length=150, min_length=40, do_sample=False)
             summary_text = summary[0]['summary_text']
 
-            # Show summary
             st.subheader("📝 Summary:")
             st.success(summary_text)
 
-            # Export PDF button
-            st.markdown("---")
+            # Offer PDF export
             st.markdown("### 📤 Export as PDF:")
-export_summary_to_pdf(summary_text)
-
+            export_summary_to_pdf(summary_text)
