@@ -75,6 +75,6 @@ fpdf
 
 
 ### 🧑‍💻 Author
+Dev Raj Singh
 
-Built with 💻 by Dev Singh.
 Feel free to connect or contribute!
